@@ -5,9 +5,7 @@ import random
 import time
 import os
 
-# Termux için ekranı gerçekten temizle (en üste)
 os.system("clear")
-print("\033[2J\033[H", end="")   # Ekstra temizleme komutu
 
 print("\033[92m")
 print("╔══════════════════════════════════════════════╗")
