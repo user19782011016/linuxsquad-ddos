@@ -4,6 +4,8 @@ import threading
 import random
 import time
 
+os.system("clear")
+
 print("\033[92m")
 print("╔══════════════════════════════════════════════╗")
 print("║          LINUXSQUAD DDoS TOOL                ║")
