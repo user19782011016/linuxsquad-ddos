@@ -6,7 +6,7 @@ import sys
 import os
 
 # ===================== BOT BANNER =====================
-bot_id = "1"  # Bu satırı her bot için değiştir: 1,2,3,4,5
+bot_id = "2"  # Bu satırı her bot için değiştir: 1,2,3,4,5
 os.system("clear")
 print(f"\033[92m[+] Bot{bot_id} Başlatıldı - LinuxSquad Ultra Bot\033[0m")
 
