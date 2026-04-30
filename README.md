@@ -22,14 +22,14 @@
 
 Termuxda Aşağıdaki komutları sırasıyla çalıştırın:
 
-'pkg update && pkg upgrade -y'
+`pkg update && pkg upgrade -y`
 
-'pkg install python git -y'
+`pkg install python git -y`
 
-'pip install aiohttp'
+`pip install aiohttp`
 
-'git clone https://github.com/liuxsquad/linuxsquad-ddos.git'
+`git clone https://github.com/liuxsquad/linuxsquad-ddos.git`
 
-'cd linuxsquad-ddos'
+`d linuxsquad-ddos`
 
-'python ripper.py' 
+`python ripper.py`
