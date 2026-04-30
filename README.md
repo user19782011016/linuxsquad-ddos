@@ -22,14 +22,14 @@
 
 Termuxda Aşağıdaki komutları sırasıyla çalıştırın:
 
+`pip install aiohttp`
+
 `pkg update && pkg upgrade -y`
 
 `pkg install python git -y`
 
-`pip install aiohttp`
-
 `git clone https://github.com/liuxsquad/linuxsquad-ddos.git`
 
-`d linuxsquad-ddos`
+`dc linuxsquad-ddos`
 
 `python ripper.py`
