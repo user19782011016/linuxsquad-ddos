@@ -35,6 +35,6 @@ Termuxda Aşağıdaki komutları sırasıyla çalıştırın:
 
 `git clone https://github.com/liuxsquad/linuxsquad-ddos.git`
 
-`dc linuxsquad-ddos`
+`cd linuxsquad-ddos`
 
-`python ripper.py`
+`python storm.py`
