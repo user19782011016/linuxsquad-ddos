@@ -1,4 +1,3 @@
-#!/data/data/com.termux/files/usr/bin/python
 import socket,random,time,os,sys,threading,struct
 
 os.system("clear")
@@ -76,8 +75,7 @@ class Flooder(threading.Thread):
                 pass
         self.udp.close()
 
-print(f"\033[93m[+] Hedef:{HEDEF} Port:{PORT} Sure:{SURE}s Thread:{THREAD}\033[0m")
-print("\033[92m[+] Layer4 UDP/TCP + Layer7 HTTP Aktif\033[0m")
+
 
 aktif=0
 for i in range(THREAD):
