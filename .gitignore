@@ -1,0 +1,24 @@
+# Setup configuration (contains secrets)
+setup_config.txt
+
+# Build artifacts
+bins/
+server
+cnc/cnc
+relay_server
+relay/relay
+
+# Go tarballs
+go*.tar.gz
+
+# TLS certificates
+cnc/certificates/server.crt
+cnc/certificates/server.key
+
+# Claude Code
+.claude/
+
+# Python cache
+__pycache__/
+*.pyc
+tor_data/
